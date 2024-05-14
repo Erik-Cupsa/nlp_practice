@@ -55,6 +55,7 @@ testing_padded = pad_sequences(testing_sequences, maxlen = max_length, padding =
 
 # print(testing_padded)
 
+#converting to numpy array for analysis
 import numpy as np
 training_padded = np.array(training_padded)
 training_labels = np.array(training_labels)
@@ -63,11 +64,12 @@ testing_labels = np.array(testing_labels)
 
 
 #embedding: 
-embedding_dim = 16 #begin with a small value like 50-100 to allow model to learn, and then increase until you start seeing diminishing returns
-#size roughly 10-20% of vocab size
+embedding_dim = 16 #each word represented as a vector of length 16
+#if too high, model may memorize training data rather than generalize to new, unseen data. 
+#If it's too low, model may not capture enough details to effectively learn the task
 
-model = tf.keras.Sequential([
-    tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length = max_length),
+model = tf.keras.Sequential([ #stack of layers
+    tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length = max_length), # Converts integer encoded vocabulary indices into dense vectors of fixed size.
     tf.keras.layers.GlobalAveragePooling1D(),
     tf.keras.layers.Dense(24, activation='relu'),
     tf.keras.layers.Dense(1, activation='sigmoid')
@@ -81,6 +83,8 @@ history = model.fit(training_padded, training_labels, epochs=num_epochs, validat
 
 model.summary()
 
+
+#predicting new sentences
 sentence = [
     "granny starting to fear spiders in the garden might be real",
     "the weather today is bright and sunny"
@@ -90,3 +94,20 @@ sequences = tokenizer.texts_to_sequences(sentence)
 padded = pad_sequences(sequences, maxlen = max_length, padding = padding_type, truncating = trunc_type)
 
 print(model.predict(padded))
+
+#Long Short-Term Memory model
+model = tf.keras.Sequential([
+    tf.keras.layers.Embedding(vocab_size, 64),
+    tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(64, return_sequences=True)),\
+    tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(32)),
+    tf.keras.layers.Dense(64, activation='relu'),
+    tf.keras.layers.Dense(1, activation='sigmoid')
+])
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+#training model: 
+num_epochs = 2 #training length
+
+history = model.fit(training_padded, training_labels, epochs=num_epochs, validation_data=(testing_padded, testing_labels), verbose=2)
+
+model.summary()
